@@ -34,6 +34,8 @@ export interface ToolDef {
    * but not for the hosted multi-tenant server, so it's excluded there.
    */
   remoteSafe?: boolean;
+  /** Remote snapshot variant: return CDN URL + save_command instead of writing a file. */
+  snapshotUrlMode?: boolean;
 }
 
 const LIMIT: ToolParam = {
@@ -283,5 +285,29 @@ export const TOOLS: ToolDef[] = [
   },
 ];
 
+/**
+ * Remote (hosted) variant of download_snapshot: the hosted server cannot write
+ * to the CUSTOMER's filesystem, but the customer's agent can. So this variant
+ * returns the snapshot's CDN download URL + current ETag + a ready-to-run
+ * command templated with the agent's save_path; the agent executes it locally
+ * and the bytes flow straight from the CDN — never through this MCP server and
+ * never into the context window. Post-billing this same shape will carry a
+ * short-lived presigned URL instead of the public CDN URL.
+ */
+export const REMOTE_SNAPSHOT_TOOL: ToolDef = {
+  name: "download_snapshot",
+  description:
+    "Get the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets, refreshed ~every 30s). Too big for a context window, so this returns a direct CDN download_url, the current etag, and a ready-to-run save_command for the save_path you provide. RUN THE COMMAND IN YOUR OWN SHELL (on the machine you're working on) — the file downloads straight from the CDN, not through this server. Re-check cheaply by passing the previous etag: if the board hasn't changed you get not_modified and skip the download.",
+  path: "/api/v1/snapshot",
+  localParams: [
+    { name: "save_path", type: "string", description: "Absolute file path ON YOUR MACHINE where you intend to save it; used to template save_command. `.gz` suffix keeps gzip; otherwise the command decompresses to JSON." },
+    { name: "etag", type: "string", description: "Optional: etag from a previous call. Unchanged board returns not_modified — no download needed." },
+  ],
+  mockKey: "snapshot_file",
+  snapshotUrlMode: true,
+};
+
 /** The subset of TOOLS exposed over the remote Streamable HTTP transport. */
-export const REMOTE_TOOLS: ToolDef[] = TOOLS.filter((t) => t.remoteSafe !== false);
+export const REMOTE_TOOLS: ToolDef[] = TOOLS.filter((t) => t.remoteSafe !== false).concat([
+  REMOTE_SNAPSHOT_TOOL,
+]);

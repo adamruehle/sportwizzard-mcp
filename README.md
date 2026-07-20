@@ -16,7 +16,7 @@ codex mcp add sportwizzard --transport http --url https://mcp.sportwizzard.com/m
   --header "Authorization: Bearer sk_your_key_here"
 ```
 
-The hosted server is a thin proxy: your key is forwarded to the SportWizzard API, which enforces auth and rate limits. It serves 19 of the 20 tools — `download_snapshot` writes to your filesystem, so it's stdio-only.
+The hosted server is a thin proxy: your key is forwarded to the SportWizzard API, which enforces auth and rate limits. All 20 tools work on both transports. (`download_snapshot` on the hosted server returns a CDN download URL + a ready-to-run command your agent executes locally; on stdio it writes the file directly.)
 
 ## Stdio (local)
 
@@ -67,7 +67,7 @@ Set `SPORTWIZZARD_MOCK=1` to get canned sample responses — useful for wiring u
 | `get_arbitrage` | Arbitrage opportunities with legs and stake fractions (two/three-way). |
 | `list_players` / `list_teams` / `get_player_stats` / `get_team_stats` | Reference data and season/historical stats. |
 | `get_player_game_logs` | Bulk per-game stat rows — the model-training feed. |
-| `download_snapshot` | The FULL live board (80k+ markets, gzip) to a file — never enters the context window; ETag-aware for cheap re-syncs. Stdio only. |
+| `download_snapshot` | The FULL live board (80k+ markets, ~70MB gzip) to a file — never enters the context window; ETag-aware for cheap re-syncs. Hosted returns a CDN URL + save command; stdio writes directly. |
 | `list_sportsbooks` / `list_leagues` / `list_markets` / `status` | Coverage: books, leagues, market types, live counts. |
 | `get_account_usage` | Your plan tier, rate limit, and monthly usage. |
 

@@ -95,6 +95,38 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
     }
     const args = (req.params.arguments ?? {}) as Record<string, unknown>;
 
+    // Remote variant: hand the agent the CDN URL + a command to run in ITS OWN
+    // shell (the hosted server cannot and should not touch customer disks).
+    if (def.name === "download_snapshot" && def.snapshotUrlMode) {
+      const savePath = String(args.save_path ?? "/tmp/sportwizzard-snapshot.json.gz");
+      const url = process.env.SPORTWIZZARD_SNAPSHOT_URL ?? "https://data.sportwizzard.com/snapshot.json.gz";
+      try {
+        const head = await fetch(url, { method: "HEAD" });
+        const etag = head.headers.get("etag") ?? undefined;
+        const size = head.headers.get("content-length") ?? undefined;
+        if (args.etag && etag && String(args.etag) === etag) {
+          return okResult({ not_modified: true, etag, note: "Board unchanged since your last download — nothing to do." });
+        }
+        // The CDN stores gzip but transparently DECOMPRESSES in transit unless
+        // the client asks for gzip (verified live: plain GET streams ~600MB
+        // JSON; Accept-Encoding: gzip delivers the ~70MB stored object).
+        const gz = savePath.endsWith(".gz");
+        const saveCommand = gz
+          ? `curl -sS -H 'Accept-Encoding: gzip' -o '${savePath}' '${url}'`
+          : `curl -sS -o '${savePath}' '${url}'`;
+        return okResult({
+          download_url: url,
+          etag,
+          size_bytes_compressed: size ? Number(size) : undefined,
+          format: "full live board, refreshed ~every 30s; .gz save_path keeps the ~70MB gzip, other paths save decompressed JSON (~10x larger)",
+          save_command: saveCommand,
+          instructions: "Run save_command in your own shell on the machine where you want the file. The download goes straight from the CDN to your disk — it does not pass through this MCP server and will not enter your context window. Keep the etag and pass it on the next call to skip unchanged downloads.",
+        });
+      } catch (e) {
+        return errorResult(`Could not reach the snapshot CDN: ${String(e)}`);
+      }
+    }
+
     // Custom handler: snapshot download streams to disk instead of returning the body.
     if (def.name === "download_snapshot") {
       const savePath = String(args.save_path ?? "");
