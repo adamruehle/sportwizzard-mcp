@@ -1,0 +1,44 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-09-29/server.schema.json",
+  "name": "com.sportwizzard/sportwizzard",
+  "description": "Real-time sports betting data: odds, player props, edges and arbitrage from 35+ books and DFS apps.",
+  "websiteUrl": "https://sportwizzard.com/developers",
+  "repository": {
+    "url": "https://github.com/adamruehle/sportwizzard-mcp",
+    "source": "github"
+  },
+  "version": "0.1.2",
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.sportwizzard.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "Bearer <api-key> \u2014 free self-serve keys at https://sportwizzard.com/account (API Keys tab), no card required",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "sportwizzard-mcp",
+      "version": "0.1.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SPORTWIZZARD_API_KEY",
+          "description": "Free self-serve API key from https://sportwizzard.com/account (API Keys tab)",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

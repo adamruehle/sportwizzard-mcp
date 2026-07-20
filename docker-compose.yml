@@ -1,0 +1,24 @@
+services:
+  sportwizzard-mcp:
+    build: .
+    container_name: sportwizzard-mcp
+    restart: unless-stopped
+    # Observability-pattern cap (see observability/docker-compose.yml): thin
+    # stateless HTTP proxy, no reason to ever need much RAM; oom_score_adj>0
+    # means the kernel kills this before it kills a product container (SB,
+    # MariaDB, nginx, cloudflared) under memory pressure.
+    mem_limit: 128m
+    mem_reservation: 48m
+    memswap_limit: 128m
+    oom_score_adj: 300
+    environment:
+      MCP_HTTP_PORT: "8091"
+      SPORTWIZZARD_BASE_URL: "https://api.sportwizzard.com"
+      MCP_ALLOWED_HOSTS: "mcp.sportwizzard.com,localhost,127.0.0.1"
+      # RATE_LIMIT_PER_MIN: "60"       # per-key backstop limiter, default 60
+      # AUTH_CACHE_TTL_MS: "180000"    # bearer-key validation cache, default 3 min
+    ports:
+      # Loopback-only — reached from the public internet via the cloudflared
+      # tunnel (mcp.sportwizzard.com -> http://localhost:8091), same pattern
+      # as api.sportwizzard.com -> nginx.
+      - "127.0.0.1:8091:8091"

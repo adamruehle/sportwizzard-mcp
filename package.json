@@ -1,0 +1,53 @@
+{
+  "name": "sportwizzard-mcp",
+  "version": "0.1.2",
+  "description": "Model Context Protocol (MCP) server for the SportWizzard sports-betting data API \u2014 query live odds, edges, arbitrage, player/team stats and reference data from any MCP-capable AI agent.",
+  "license": "MIT",
+  "author": "SportWizzard LLC",
+  "homepage": "https://sportwizzard.com",
+  "type": "module",
+  "bin": {
+    "sportwizzard-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "start": "node dist/index.js",
+    "start:http": "node dist/httpServer.js"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "sportwizzard",
+    "sports-betting",
+    "odds",
+    "arbitrage",
+    "dfs",
+    "claude",
+    "ai-agent"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^20.14.0",
+    "@types/express": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adamruehle/sportwizzard-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/adamruehle/sportwizzard-mcp/issues"
+  },
+  "mcpName": "com.sportwizzard/sportwizzard"
+}
