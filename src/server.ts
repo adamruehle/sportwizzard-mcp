@@ -8,8 +8,18 @@ import {
   CallToolRequestSchema,
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { readFileSync } from "node:fs";
 import { apiGet, downloadSnapshot, ClientConfig, SportWizzardError } from "./client.js";
 import { mockFor } from "./mock.js";
+
+/** Package version, read from package.json so serverInfo never drifts from the release. */
+const PKG_VERSION: string = (() => {
+  try {
+    return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || "0.0.0";
+  } catch {
+    return "0.0.0";
+  }
+})();
 import { TOOLS, ToolDef, ToolParam } from "./tools.js";
 
 function jsonSchemaType(t: ToolParam["type"]): string {
@@ -76,7 +86,7 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
   const byName = new Map(tools.map((t) => [t.name, t]));
 
   const server = new Server(
-    { name: "sportwizzard-mcp", version: "0.1.0" },
+    { name: "sportwizzard-mcp", version: PKG_VERSION },
     { capabilities: { tools: {} } }
   );
 
@@ -146,11 +156,18 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
     let path = def.path;
     const pathNames = new Set((def.pathParams ?? []).map((p) => p.name));
     for (const p of def.pathParams ?? []) {
-      const v = args[p.name];
+      // Accept `id` as a forgiving alias for a sole `*_id` path param — agents
+      // commonly guess `id` (e.g. get_event) since the REST detail routes are
+      // conceptually keyed by id.
+      let v = args[p.name];
+      if ((v === undefined || v === null || v === "") && p.name.endsWith("_id") && args.id != null) {
+        v = args.id;
+      }
       if (v === undefined || v === null || v === "") {
         return errorResult(`Missing required parameter '${p.name}' for ${def.name}`);
       }
       path = path.replace(`{${p.name}}`, encodeURIComponent(String(v)));
+      pathNames.add("id"); // don't also forward the alias as a query param
     }
     const query: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(args)) {

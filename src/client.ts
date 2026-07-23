@@ -3,7 +3,9 @@
 // - Understands the `{ success, data, nextCursor, meta }` envelope.
 
 export const DEFAULT_BASE_URL = "https://api.sportwizzard.com";
-export const USER_AGENT = "sportwizzard-mcp/0.1.0";
+import { readFileSync } from "node:fs";
+const _v = (() => { try { return JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version || "0.0.0"; } catch { return "0.0.0"; } })();
+export const USER_AGENT = `sportwizzard-mcp/${_v}`;
 
 export interface ClientConfig {
   baseUrl: string;
