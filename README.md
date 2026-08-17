@@ -8,12 +8,12 @@ Query live sports-betting data — **odds, player props, +EV edges, arbitrage, s
 
 ```bash
 claude mcp add --transport http sportwizzard https://mcp.sportwizzard.com/mcp \
-  --header "Authorization: Bearer sk_your_key_here"
+  --header "Authorization: Bearer sw_live_your_api_key_here"
 ```
 
 ```bash
 codex mcp add sportwizzard --transport http --url https://mcp.sportwizzard.com/mcp \
-  --header "Authorization: Bearer sk_your_key_here"
+  --header "Authorization: Bearer sw_live_your_api_key_here"
 ```
 
 The hosted server is a thin proxy: your key is forwarded to the SportWizzard API, which enforces auth and rate limits. All 20 tools work on both transports. (`download_snapshot` on the hosted server returns a CDN download URL + a ready-to-run command your agent executes locally; on stdio it writes the file directly.)
@@ -27,7 +27,7 @@ npx -y sportwizzard-mcp
 Claude Code:
 
 ```bash
-claude mcp add sportwizzard -e SPORTWIZZARD_API_KEY=sk_your_key_here -- npx -y sportwizzard-mcp
+claude mcp add sportwizzard -e SPORTWIZZARD_API_KEY=sw_live_your_api_key_here -- npx -y sportwizzard-mcp
 ```
 
 Claude Desktop (`claude_desktop_config.json` — macOS: `~/Library/Application Support/Claude/`, Windows: `%APPDATA%\Claude\`):
@@ -38,7 +38,7 @@ Claude Desktop (`claude_desktop_config.json` — macOS: `~/Library/Application S
     "sportwizzard": {
       "command": "npx",
       "args": ["-y", "sportwizzard-mcp"],
-      "env": { "SPORTWIZZARD_API_KEY": "sk_your_key_here" }
+      "env": { "SPORTWIZZARD_API_KEY": "sw_live_your_api_key_here" }
     }
   }
 }
