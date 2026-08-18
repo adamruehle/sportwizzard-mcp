@@ -239,11 +239,12 @@ export const TOOLS: ToolDef[] = [
   {
     name: "download_snapshot",
     description:
-      "Download the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets) — and save it to a file on disk instead of returning it (it would not fit in a context window). Provide an absolute save_path: a path ending in .gz keeps the gzip; any other path writes decompressed JSON. Returns the saved path, byte count and ETag. Re-poll cheaply by passing the returned etag: unchanged data returns not_modified without downloading.",
+      "Download the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets) — and save it to a file on disk instead of returning it (it would not fit in a context window). Provide an absolute save_path: a path ending in .gz keeps the gzip; any other path writes decompressed JSON. Pass include_history=true to also populate every selection's priceHistory (line-movement entries {fs,ls,pa,pd|dm,su?}; costs 5 credits flat instead of 1 — same schema either way, priceHistory is null without it). Returns the saved path, byte count and ETag. Re-poll cheaply by passing the returned etag: unchanged data returns not_modified without downloading (each variant has its own etag).",
     path: "/api/v1/snapshot",
     localParams: [
       { name: "save_path", type: "string", description: "Absolute file path to write the snapshot to. `.gz` suffix keeps it gzip-compressed; otherwise decompressed JSON is written." },
       { name: "etag", type: "string", description: "Optional: the etag from a previous download. If the board hasn't changed the server returns 304 and nothing is downloaded." },
+      { name: "include_history", type: "boolean", description: "true = populate every selection's priceHistory entries (5 credits flat vs 1). Identical schema either way — priceHistory is null when false." },
     ],
     mockKey: "snapshot_file",
     remoteSafe: false,
@@ -297,11 +298,12 @@ export const TOOLS: ToolDef[] = [
 export const REMOTE_SNAPSHOT_TOOL: ToolDef = {
   name: "download_snapshot",
   description:
-    "Get the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets, refreshed ~every 30s). Too big for a context window, so this returns a direct CDN download_url, the current etag, and a ready-to-run save_command for the save_path you provide. RUN THE COMMAND IN YOUR OWN SHELL (on the machine you're working on) — the file downloads straight from the CDN, not through this server. Re-check cheaply by passing the previous etag: if the board hasn't changed you get not_modified and skip the download.",
+    "Get the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets, refreshed ~every 30s). Too big for a context window, so this returns a direct CDN download_url, the current etag, and a ready-to-run save_command for the save_path you provide. RUN THE COMMAND IN YOUR OWN SHELL (on the machine you're working on) — the file downloads straight from the CDN, not through this server. Pass include_history=true for the variant with every selection's priceHistory populated (line movement; same schema, priceHistory is null without it). Re-check cheaply by passing the previous etag: if the board hasn't changed you get not_modified and skip the download (each variant has its own etag).",
   path: "/api/v1/snapshot",
   localParams: [
     { name: "save_path", type: "string", description: "Absolute file path ON YOUR MACHINE where you intend to save it; used to template save_command. `.gz` suffix keeps gzip; otherwise the command decompresses to JSON." },
     { name: "etag", type: "string", description: "Optional: etag from a previous call. Unchanged board returns not_modified — no download needed." },
+    { name: "include_history", type: "boolean", description: "true = the with-history CDN object (every selection's priceHistory populated). Identical schema either way." },
   ],
   mockKey: "snapshot_file",
   snapshotUrlMode: true,

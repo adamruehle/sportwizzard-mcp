@@ -109,7 +109,10 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
     // shell (the hosted server cannot and should not touch customer disks).
     if (def.name === "download_snapshot" && def.snapshotUrlMode) {
       const savePath = String(args.save_path ?? "/tmp/sportwizzard-snapshot.json.gz");
-      const url = process.env.SPORTWIZZARD_SNAPSHOT_URL ?? "https://data.sportwizzard.com/snapshot.json.gz";
+      const withHistory = args.include_history === true || args.include_history === "true";
+      const url = withHistory
+        ? (process.env.SPORTWIZZARD_SNAPSHOT_HISTORY_URL ?? "https://data.sportwizzard.com/snapshot-with-history.json.gz")
+        : (process.env.SPORTWIZZARD_SNAPSHOT_URL ?? "https://data.sportwizzard.com/snapshot.json.gz");
       try {
         const head = await fetch(url, { method: "HEAD" });
         const etag = head.headers.get("etag") ?? undefined;
@@ -128,7 +131,9 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
           download_url: url,
           etag,
           size_bytes_compressed: size ? Number(size) : undefined,
-          format: "full live board, refreshed ~every 30s; .gz save_path keeps the ~70MB gzip, other paths save decompressed JSON (~10x larger)",
+          format: withHistory
+            ? "full live board WITH every selection's priceHistory, refreshed ~every 30s; .gz save_path keeps the gzip, other paths save decompressed JSON (~10x larger)"
+            : "full live board (priceHistory null on every selection — pass include_history=true for line movement), refreshed ~every 30s; .gz save_path keeps the gzip, other paths save decompressed JSON (~10x larger)",
           save_command: saveCommand,
           instructions: "Run save_command in your own shell on the machine where you want the file. The download goes straight from the CDN to your disk — it does not pass through this MCP server and will not enter your context window. Keep the etag and pass it on the next call to skip unchanged downloads.",
         });
@@ -144,7 +149,8 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
         return errorResult("Parameter 'save_path' must be an absolute file path (e.g. /tmp/snapshot.json or /tmp/snapshot.json.gz).");
       }
       try {
-        const meta = await downloadSnapshot(cfg, savePath, args.etag ? String(args.etag) : undefined);
+        const meta = await downloadSnapshot(cfg, savePath, args.etag ? String(args.etag) : undefined,
+          args.include_history === true || args.include_history === "true");
         return okResult(meta);
       } catch (e) {
         const msg = e instanceof SportWizzardError ? e.message : `Unexpected error: ${String(e)}`;

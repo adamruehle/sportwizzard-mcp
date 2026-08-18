@@ -103,7 +103,8 @@ export async function apiGet(
 export async function downloadSnapshot(
   cfg: ClientConfig,
   savePath: string,
-  etag?: string
+  etag?: string,
+  includeHistory?: boolean
 ): Promise<any> {
   const { createWriteStream } = await import("node:fs");
   const { mkdir, stat } = await import("node:fs/promises");
@@ -133,7 +134,8 @@ export async function downloadSnapshot(
 
   let res: Response;
   try {
-    res = await fetch(cfg.baseUrl + "/api/v1/snapshot", { headers });
+    const qs = includeHistory ? "?include_history=true" : "";
+    res = await fetch(cfg.baseUrl + "/api/v1/snapshot" + qs, { headers });
   } catch (e: any) {
     throw new SportWizzardError(`Network error downloading snapshot: ${e?.message ?? e}`);
   }
