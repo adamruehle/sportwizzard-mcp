@@ -49,6 +49,13 @@ const CURSOR: ToolParam = {
   description:
     "Opaque pagination cursor. Pass the `nextCursor` from a previous response to fetch the next page.",
 };
+const SCOPE: ToolParam = {
+  name: "scope",
+  type: "string",
+  description:
+    "Which KIND of market to return. `event` = single-game markets. `season` = season-long futures (division/conference/championship winners, awards, team win totals, season leaders, full-season player props). `tournament` = golf/tennis tournament outrights — a different product from season futures. Exact match: `season` does NOT include TOURNAMENT rows. Omit for all scopes (the default). An unrecognised value returns 400 listing the valid ones, so a typo can never look like \"no futures exist\".",
+  enum: ["event", "season", "tournament"],
+};
 
 export const TOOLS: ToolDef[] = [
   // ---- Events (the spine) ---------------------------------------------------
@@ -91,7 +98,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_event_odds",
     description:
-      "Get every sportsbook price for a single event: one flat row per book x market x selection, with american+decimal price, line, side, player/team, and SportWizzard's devigged fair odds where available. Use an event id from list_events.",
+      "Get every sportsbook price for a single event: one flat row per book x market x selection, with american+decimal price, line, side, player/team, and SportWizzard's devigged fair odds where available. Use an event id from list_events. An event id can also be a SEASON ANCHOR — the synthetic, teamless event every season-long future for a competition hangs off — in which case this returns that competition's whole cross-book futures board (rows carrying marketScope=SEASON plus period/segment), which runs to tens of thousands of rows; prefer get_odds with scope=season and a league/sportsbook filter for that.",
     path: "/api/v1/events/{event_id}/odds",
     pathParams: [
       { name: "event_id", type: "string", description: "Event UUID (from list_events)." },
@@ -103,15 +110,18 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_odds",
     description:
-      "Core odds query. Returns a flat array of book prices scoped by any combination of event_id, player_id, team_id, sportsbook, market and league. Called unscoped it paginates hard — prefer scoping to at least one entity. Paginate with cursor.",
+      "Core odds query. Returns a flat array of book prices, narrowed by any combination of event_id, player_id, team_id, sportsbook, market, league and scope. Called with no filters it paginates hard — narrow to at least one entity. Paginate with cursor.\n\n" +
+      "FUTURES live here: pass scope=season for season-long futures (division/conference/championship winners, award odds, team win totals, season leaders, full-season player props — a PLAYER_TOTAL_PASS_YARDS at scope=season is a ~3,750.5 SEASON line, not a game line), or scope=tournament for golf/tennis outrights. Futures rows are described by three ORTHOGONAL axes: `marketScope` (SEASON | TOURNAMENT — the anchor the market hangs off; omitted entirely on ordinary game rows), `period` (the window within that anchor: REG_SEASON settles at the end of the regular season, FULL runs through the playoffs) and `segment` (the slice of the competition: AFC_EAST, NFC_WEST, AL, NL, SEC ... — present only when the market is segment-scoped). READ `segment` — it is load-bearing: all 32 NFL DIVISION_WINNER selections share ONE season-anchor eventId, so ignoring segment turns 8 separate division races into one nonsensical 32-team market.\n\n" +
+      "Futures gotchas: winner/award markets are CATEGORICAL — one YES selection per competitor with teamSide \"NONE\", and most books offer no NO side, so these are not two-way markets. `eventStartTime` on a futures row is the SEASON-ANCHOR / settlement date (e.g. the Super Bowl date), NOT a kickoff. Every book's futures for a competition converge on the same season eventId, so scope=season + league is already a cross-book board. Futures are deliberately EXCLUDED from get_edges and get_arbitrage — season markets never enter de-vig or edge math (a product decision, not a gap).",
     path: "/api/v1/odds",
     queryParams: [
       { name: "event_id", type: "string", description: "Scope to one event (UUID from list_events)." },
       { name: "player_id", type: "string", description: "Scope to one player (UUID from list_players)." },
       { name: "team_id", type: "string", description: "Scope to one team (UUID from list_teams)." },
       { name: "sportsbook", type: "string", description: "Sportsbook / DFS source id (e.g. draftkings, prizepicks). See list_sportsbooks." },
-      { name: "market", type: "string", description: "Market type filter (e.g. MONEYLINE, SPREAD, PLAYER_TOTAL). See list_markets." },
+      { name: "market", type: "string", description: "Market FAMILY filter, matched as a substring (e.g. MONEYLINE, SPREAD, PLAYER_TOTAL, TEAM_TOTAL, CATEGORICAL). The specific token — DIVISION_WINNER, AWARD_MVP, SEASON_LEADER_PASS_YARDS, TEAM_TOTAL_WINS — is each row's `marketSubtype`, not this filter: winner/award futures live under market=CATEGORICAL. See list_markets." },
       { name: "league", type: "string", description: "League slug filter." },
+      SCOPE,
       CURSOR,
       LIMIT,
     ],
@@ -120,7 +130,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_player_odds",
     description:
-      "All current book prices for a single player across events and markets (player props). Use a player id from list_players. Paginate with cursor.",
+      "All current book prices for a single player across events and markets (player props). Use a player id from list_players. Paginate with cursor. This endpoint has NO scope filter, so the rows can mix game props with season-long futures (award odds, full-season stat lines) — those carry marketScope=SEASON and eventStartTime = the season anchor date, not a kickoff. To split them, use get_odds with player_id plus scope=event or scope=season.",
     path: "/api/v1/players/{player_id}/odds",
     pathParams: [
       { name: "player_id", type: "string", description: "Player UUID (from list_players)." },
@@ -144,7 +154,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_edges",
     description:
-      "SportWizzard's edge finder: DFS/book offers that are +EV versus the devigged fair market, with the edge %, the book(s) setting fair value, and per-book odds. Filter by league, source (DFS/book), minimum edge, or a single event. Paginate with cursor.",
+      "SportWizzard's edge finder: DFS/book offers that are +EV versus the devigged fair market, with the edge %, the book(s) setting fair value, and per-book odds. Filter by league, source (DFS/book), minimum edge, or a single event. Paginate with cursor. GAME markets only: season and tournament futures are excluded by design — they never enter de-vig or edge math, so an empty result here says nothing about futures coverage (query those with get_odds scope=season).",
     path: "/api/v1/edges",
     queryParams: [
       { name: "league", type: "string", description: "League slug filter." },
@@ -159,7 +169,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "get_arbitrage",
     description:
-      "Arbitrage scanner: cross-book opportunities with a guaranteed profit, including each leg (source, selection, odds) and the optimal stake fractions. Filter by type (two_way | three_way) and minimum profit %. Paginate with cursor.",
+      "Arbitrage scanner: cross-book opportunities with a guaranteed profit, including each leg (source, selection, odds) and the optimal stake fractions. Filter by type (two_way | three_way) and minimum profit %. Paginate with cursor. GAME markets only: season and tournament futures are excluded by design (categorical winner/award markets have no NO side to arb against and never enter de-vig math).",
     path: "/api/v1/arbitrage",
     queryParams: [
       { name: "type", type: "string", description: "Arbitrage type.", enum: ["two_way", "three_way"] },

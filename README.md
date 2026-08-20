@@ -62,7 +62,7 @@ Set `SPORTWIZZARD_MOCK=1` to get canned sample responses — useful for wiring u
 |---|---|
 | `list_events` / `get_event` | Events/fixtures — filter by league, team, status, time; full detail incl. weather, lineups, probable pitchers. |
 | `get_event_stats` | Box score: every player's stat line + team results for one event. |
-| `get_odds` / `get_event_odds` / `get_player_odds` / `get_team_odds` | Current prices, scoped by event, player, team, sportsbook, market, or league. |
+| `get_odds` / `get_event_odds` / `get_player_odds` / `get_team_odds` | Current prices, scoped by event, player, team, sportsbook, market, or league. `get_odds` also takes `scope`: `event` (game markets), `season` (season-long futures), `tournament` (golf/tennis outrights); omit for all. |
 | `get_edges` | +EV edges vs. devigged fair market (league, source, min_edge filters). |
 | `get_arbitrage` | Arbitrage opportunities with legs and stake fractions (two/three-way). |
 | `list_players` / `list_teams` / `get_player_stats` / `get_team_stats` | Reference data and season/historical stats. |
@@ -72,6 +72,16 @@ Set `SPORTWIZZARD_MOCK=1` to get canned sample responses — useful for wiring u
 | `get_account_usage` | Your plan tier, rate limit, and monthly usage. |
 
 Every response uses the envelope `{ success, data, nextCursor, meta }`; when `nextCursor` is present the tool appends a `_paging` hint so agents know to continue.
+
+### Futures (season-scope markets)
+
+`get_odds` with `scope=season` returns season-long futures — division/conference/championship winners, award odds, team win totals, season leaders and full-season player props. Three orthogonal axes describe them:
+
+- **`marketScope`** — which anchor the market hangs off: `SEASON` or `TOURNAMENT`. Omitted entirely on ordinary game rows.
+- **`period`** — the window within that anchor: `REG_SEASON` (settles at the end of the regular season) or `FULL` (runs through the playoffs).
+- **`segment`** — which slice of the competition: `AFC_EAST`, `NL`, `SEC`, … Present only when the market is segment-scoped, and load-bearing: all 32 NFL `DIVISION_WINNER` selections share **one** season-anchor `eventId`, so without `segment` they read as a single 32-team race instead of 8 divisions.
+
+Notes: winner/award markets are categorical (one `YES` selection per competitor, `teamSide: "NONE"`, usually no NO side); `eventStartTime` on a futures row is the season anchor / settlement date, **not** a kickoff; every book's futures for a competition share the same season `eventId`; and futures are deliberately excluded from `get_edges` / `get_arbitrage` (they never enter de-vig or edge math). Scope matching is exact — `season` does not include `TOURNAMENT` — and an invalid value returns HTTP 400 naming the valid ones.
 
 ## From source
 

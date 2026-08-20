@@ -78,9 +78,56 @@ export const MOCK: Record<string, any> = {
         eventStartTime: "2026-07-10T00:00",
         updated: "2026-07-09T16:58:04Z",
       },
+      // A SEASON-scope future. `marketScope` and `segment` appear ONLY on
+      // non-EVENT rows (game rows above omit both entirely). All 32 NFL
+      // DIVISION_WINNER selections share this one season-anchor eventId, so
+      // `segment` is what separates the 8 division races; `eventStartTime` is
+      // the season anchor / settlement date, not a kickoff. Categorical
+      // market: one YES selection per team, teamSide "NONE", no NO side.
+      {
+        id: "b2e737f7-dfb6-4535-bdc4-852ce6b8d255:betonline:DIVISION_WINNER:01a01e15-a58c-7092-8a5b",
+        sportsbook: "betonline",
+        league: "nfl",
+        eventId: "b2e737f7-dfb6-4535-bdc4-852ce6b8d255",
+        market: "CATEGORICAL",
+        marketSubtype: "DIVISION_WINNER",
+        period: "REG_SEASON",
+        selection: "Buffalo Bills",
+        priceAmerican: -180,
+        priceDecimal: 1.56,
+        side: "YES",
+        teamSide: "NONE",
+        teamName: "Buffalo Bills",
+        suspended: false,
+        eventStartTime: "2027-01-10T18:00",
+        updated: "2026-08-20T16:33:20Z",
+        marketScope: "SEASON",
+        segment: "AFC_EAST",
+      },
+      // A TOURNAMENT-scope outright (golf/tennis) — a different product from
+      // season futures; scope=season does NOT return these.
+      {
+        id: "00063747-5880-422e-8552-149dc68805ae:betmgm:TOURNAMENT_WINNER:019fec53-c223-794f",
+        sportsbook: "betmgm",
+        league: "pga-tour",
+        eventId: "00063747-5880-422e-8552-149dc68805ae",
+        market: "CATEGORICAL",
+        marketSubtype: "TOURNAMENT_WINNER",
+        period: "FULL",
+        selection: "Xander Schauffele",
+        priceAmerican: 1400,
+        priceDecimal: 15.0,
+        side: "XANDER SCHAUFFELE",
+        playerId: "744d092e-ec17-435d-967c-3815c4f4f827",
+        playerName: "Xander Schauffele",
+        suspended: false,
+        eventStartTime: "2026-08-30T21:00",
+        updated: "2026-08-13T11:05:43Z",
+        marketScope: "TOURNAMENT",
+      },
     ],
     nextCursor: null,
-    meta: { count: 1 },
+    meta: { count: 3 },
     _mock: true,
   },
   edges: {
