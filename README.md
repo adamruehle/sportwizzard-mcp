@@ -91,6 +91,14 @@ cd sportwizzard-mcp && npm install && npm run build
 SPORTWIZZARD_MOCK=1 node dist/index.js   # or set SPORTWIZZARD_API_KEY
 ```
 
+## Maintainer publishing
+
+Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The workflow verifies that the version is unused, installs dependencies, builds, previews the npm tarball, and publishes through npm trusted publishing (GitHub OIDC). It does not run on pushes.
+
+Before the first release, configure a trusted publisher in the package's npm settings for GitHub Actions, repository `adamruehle/sportwizzard-mcp`, workflow file `publish-npm.yml`, and allow `npm publish`. The equivalent command is `npx --yes npm@11.15.0 trust github --file publish-npm.yml --repository adamruehle/sportwizzard-mcp --allow-publish`. This command changes npm account settings and requires package write access and account 2FA; it is deliberately not run as part of source setup. The workflow uses Node 24 and npm 11.15.0, which support npm's OIDC publishing.
+
+To refresh local npm CLI access, use `npx --yes npm@11 login`, then confirm the identity with `npm whoami`. The installed npm 10 login command crashes in the maintainer environment; npm 11 login is the working refresh path. On Adam's workstation, `~/.npmrc` is a symlink to `/home/adamr/Development/sportwizzard-account-secrets/npm/npmrc`. Keep that symlink and target local, never print or commit the file contents, and do not copy its token into the repository. The local login is separate from workflow publishing, which uses short-lived OIDC credentials and needs no npm token secret.
+
 ## License
 
 MIT © SportWizzard LLC
