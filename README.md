@@ -86,7 +86,7 @@ Notes: winner/award markets are categorical (one `YES` selection per competitor,
 ## From source
 
 ```bash
-git clone https://github.com/adamruehle/sportwizzard-mcp.git
+git clone https://github.com/sportwizzard-admin/sportwizzard-mcp.git
 cd sportwizzard-mcp && npm install && npm run build
 SPORTWIZZARD_MOCK=1 node dist/index.js   # or set SPORTWIZZARD_API_KEY
 ```
@@ -100,7 +100,7 @@ in `sportwizzard-ops/deployment/releases/api.yaml` to deploy through Ops.
 Production placement, resource limits and credentials references belong there.
 Publishing the npm launcher below does not update the hosted container.
 
-Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The build job verifies package/lock/registry metadata and the unused version, installs dependencies without lifecycle scripts, builds once, and packs a tarball. It installs that tarball in a disposable consumer and runs the mock stdio smoke below. A separate publish job receives OIDC permission, verifies the tarball checksum, and publishes those exact bytes with lifecycle scripts disabled; it does not check out source or install application dependencies. The workflow retains the tarball and smoke receipt and does not run on pushes.
+Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, synchronize `server.json`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The build job verifies package/lock/registry metadata and the unused version, installs dependencies without lifecycle scripts, builds once, and packs a tarball. It installs that tarball in a disposable consumer and runs the mock stdio smoke below. A separate publish job receives OIDC permission, verifies the tarball checksum, and publishes those exact bytes with lifecycle scripts disabled; it does not check out source or install application dependencies. The workflow retains the tarball and smoke receipt and does not run on pushes.
 
 ### Package smoke (no production API)
 
@@ -121,7 +121,7 @@ receipt records artifact hash, inputs, server version, outputs and duration.
 It verifies transport, packaging and parameter forwarding; it does not establish
 live API data quality. Retain the receipt, then remove the temporary directory.
 
-Before the first release, configure a trusted publisher in the package's npm settings for GitHub Actions, repository `adamruehle/sportwizzard-mcp`, workflow file `publish-npm.yml`, and allow `npm publish`. The equivalent command is `npx --yes npm@11.15.0 trust github --file publish-npm.yml --repository adamruehle/sportwizzard-mcp --allow-publish`. This command changes npm account settings and requires package write access and account 2FA; it is deliberately not run as part of source setup. The workflow uses Node 24 and npm 11.15.0, which support npm's OIDC publishing.
+The repository moved to the personal GitHub account `sportwizzard-admin`. Its npm trusted-publisher connection has not yet been reconnected or qualified for the new owner; the prior `adamruehle/sportwizzard-mcp` trust does not transfer. After the owner completes the pending npm passkey login, configure a trusted publisher in the package's npm settings for GitHub Actions, repository `sportwizzard-admin/sportwizzard-mcp`, workflow file `publish-npm.yml`, and allow `npm publish`. The equivalent command is `npx --yes npm@11.15.0 trust github --file publish-npm.yml --repository sportwizzard-admin/sportwizzard-mcp --allow-publish`. This command changes npm account settings and requires package write access and account 2FA; it is deliberately not run as part of source setup. The workflow uses Node 24 and npm 11.15.0, which support npm's OIDC publishing. Do not dispatch or claim a new-owner publish until the connection is qualified.
 
 To refresh local npm CLI access, use `npx --yes npm@11 login`, then confirm the identity with `npm whoami`. The installed npm 10 login command crashes in the maintainer environment; npm 11 login is the working refresh path. On Adam's workstation, `~/.npmrc` is a symlink to `/home/adamr/Development/sportwizzard-account-secrets/npm/npmrc`. Keep that symlink and target local, never print or commit the file contents, and do not copy its token into the repository. The local login is separate from workflow publishing, which uses short-lived OIDC credentials and needs no npm token secret.
 
