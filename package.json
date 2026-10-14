@@ -18,6 +18,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "smoke": "node tests/stdio-smoke.mjs",
     "prepare": "npm run build",
     "start": "node dist/index.js",
     "start:http": "node dist/httpServer.js"

@@ -100,7 +100,26 @@ in `sportwizzard-ops/deployment/releases/api.yaml` to deploy through Ops.
 Production placement, resource limits and credentials references belong there.
 Publishing the npm launcher below does not update the hosted container.
 
-Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The workflow verifies that the version is unused, installs dependencies, builds, previews the npm tarball, and publishes through npm trusted publishing (GitHub OIDC). It does not run on pushes.
+Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The build job verifies package/lock/registry metadata and the unused version, installs dependencies without lifecycle scripts, builds once, and packs a tarball. It installs that tarball in a disposable consumer and runs the mock stdio smoke below. A separate publish job receives OIDC permission, verifies the tarball checksum, and publishes those exact bytes with lifecycle scripts disabled; it does not check out source or install application dependencies. The workflow retains the tarball and smoke receipt and does not run on pushes.
+
+### Package smoke (no production API)
+
+After `npm ci --ignore-scripts` and `npm run build`, pack and install the artifact
+in a temporary consumer directory, then exercise its actual stdio entry point:
+
+```bash
+release_dir="$(mktemp -d)"
+npm pack --ignore-scripts --pack-destination "$release_dir"
+npm install --prefix "$release_dir/consumer" --omit=dev --ignore-scripts --no-audit --no-fund "$release_dir"/*.tgz
+npm run smoke -- "$release_dir/consumer/node_modules/sportwizzard-mcp/dist/index.js" "$release_dir/smoke.json" "$release_dir"/*.tgz
+```
+
+The smoke has a 20-second protocol timeout and uses a loopback mock HTTP API
+with no credentials. It checks `tools/list`, forwards `get_odds scope=season`,
+and downloads/decompresses a snapshot with `include_history=true`. The JSON
+receipt records artifact hash, inputs, server version, outputs and duration.
+It verifies transport, packaging and parameter forwarding; it does not establish
+live API data quality. Retain the receipt, then remove the temporary directory.
 
 Before the first release, configure a trusted publisher in the package's npm settings for GitHub Actions, repository `adamruehle/sportwizzard-mcp`, workflow file `publish-npm.yml`, and allow `npm publish`. The equivalent command is `npx --yes npm@11.15.0 trust github --file publish-npm.yml --repository adamruehle/sportwizzard-mcp --allow-publish`. This command changes npm account settings and requires package write access and account 2FA; it is deliberately not run as part of source setup. The workflow uses Node 24 and npm 11.15.0, which support npm's OIDC publishing.
 
