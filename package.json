@@ -45,10 +45,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/adamruehle/sportwizzard-mcp.git"
+    "url": "git+https://github.com/sportwizzard-admin/sportwizzard-mcp.git"
   },
   "bugs": {
-    "url": "https://github.com/adamruehle/sportwizzard-mcp/issues"
+    "url": "https://github.com/sportwizzard-admin/sportwizzard-mcp/issues"
   },
   "mcpName": "com.sportwizzard/sportwizzard"
 }
