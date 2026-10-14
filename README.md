@@ -93,6 +93,13 @@ SPORTWIZZARD_MOCK=1 node dist/index.js   # or set SPORTWIZZARD_API_KEY
 
 ## Maintainer publishing
 
+The hosted HTTP service has a separate container publisher:
+`publish-container.yml` runs on `main`, builds tracked source, and publishes a
+source-labeled GHCR image with an `image-release` receipt. Promote that digest
+in `sportwizzard-ops/deployment/releases/api.yaml` to deploy through Ops.
+Production placement, resource limits and credentials references belong there.
+Publishing the npm launcher below does not update the hosted container.
+
 Publishing is a manual GitHub Actions release. First bump `version` in `package.json`, update `package-lock.json` with `npm install --package-lock-only`, and merge the change to `main`. Then run **Publish npm package** from the repository's Actions tab with `main` selected. The workflow verifies that the version is unused, installs dependencies, builds, previews the npm tarball, and publishes through npm trusted publishing (GitHub OIDC). It does not run on pushes.
 
 Before the first release, configure a trusted publisher in the package's npm settings for GitHub Actions, repository `adamruehle/sportwizzard-mcp`, workflow file `publish-npm.yml`, and allow `npm publish`. The equivalent command is `npx --yes npm@11.15.0 trust github --file publish-npm.yml --repository adamruehle/sportwizzard-mcp --allow-publish`. This command changes npm account settings and requires package write access and account 2FA; it is deliberately not run as part of source setup. The workflow uses Node 24 and npm 11.15.0, which support npm's OIDC publishing.
