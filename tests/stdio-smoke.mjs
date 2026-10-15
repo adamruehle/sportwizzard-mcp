@@ -65,6 +65,10 @@ const payload = result => {
 };
 try {
   await client.connect(transport);
+  const installedPackage = JSON.parse(await readFile(
+    resolve(dirname(resolve(entryArgument)), '../package.json'), 'utf8'));
+  assert.equal(client.getServerVersion().version, installedPackage.version,
+    'installed tarball MCP serverInfo must report its package version');
   const tools = (await client.listTools()).tools;
   assert(tools.length > 0);
   assert.equal(new Set(tools.map(tool => tool.name)).size, tools.length);
@@ -170,6 +174,7 @@ try {
     environment: 'installed npm tarball; stdio MCP; loopback mock API; no production API or credentials',
     command: 'npm run smoke -- INSTALLED_ENTRY RECEIPT_PATH TARBALL_PATH',
     package_sha256: createHash('sha256').update(await readFile(resolve(tarballArgument))).digest('hex'),
+    package_version: installedPackage.version,
     server: client.getServerVersion(), tools_list_count: tools.length, requests,
     snapshot_bytes: saved.length, include_history_preserved: true,
     duration_seconds: (performance.now() - started) / 1000 };
