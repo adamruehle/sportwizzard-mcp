@@ -249,7 +249,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "download_snapshot",
     description:
-      "Download the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets) — and save it to a file on disk instead of returning it (it would not fit in a context window). Provide an absolute save_path: a path ending in .gz keeps the gzip; any other path writes decompressed JSON. Pass include_history=true to also populate every selection's priceHistory (line-movement entries {fs,ls,pa,pd|dm,su?}; costs 5 credits flat instead of 1 — same schema either way, priceHistory is null without it). Returns the saved path, byte count and ETag. Re-poll cheaply by passing the returned etag: unchanged data returns not_modified without downloading (each variant has its own etag).",
+      "Download the full live odds board to a file on disk instead of returning it (it is too large for a context window). Provide an absolute save_path: a path ending in .gz keeps the gzip; any other path writes decompressed JSON. Pass include_history=true to include each selection's priceHistory (line-movement entries {fs,ls,pa,pd|dm,su?}; costs 5 credits flat instead of 1 — priceHistory is null without it). Returns the saved path, byte count and ETag. Re-poll cheaply by passing the returned etag: unchanged data returns not_modified without downloading (each variant has its own etag).",
     path: "/api/v1/snapshot",
     localParams: [
       { name: "save_path", type: "string", description: "Absolute file path to write the snapshot to. `.gz` suffix keeps it gzip-compressed; otherwise decompressed JSON is written." },
@@ -269,7 +269,7 @@ export const TOOLS: ToolDef[] = [
   {
     name: "list_sportsbooks",
     description:
-      "List the sportsbooks and DFS platforms SportWizzard tracks, with a live market count each. Reference/discovery — call this to learn valid `sportsbook` filter values.",
+      "List the sportsbook and DFS source IDs used by SportWizzard. Reference/discovery — call this to learn valid `sportsbook` filter values.",
     path: "/api/v1/sportsbooks",
     mockKey: "sportsbooks",
   },
@@ -283,14 +283,14 @@ export const TOOLS: ToolDef[] = [
   {
     name: "list_markets",
     description:
-      "List the market types SportWizzard supports, each with a live market count. Reference/discovery — call this to learn valid `market` filter values.",
+      "List the market types SportWizzard supports. Reference/discovery — call this to learn valid `market` filter values.",
     path: "/api/v1/markets",
     mockKey: "markets",
   },
   {
     name: "status",
     description:
-      "Platform status: total live markets and number of sportsbooks currently ingesting. A cheap health/coverage check.",
+      "Check whether the customer data API is responding. This does not report global cache inventory.",
     path: "/api/v1/status",
     mockKey: "status",
   },
@@ -308,7 +308,7 @@ export const TOOLS: ToolDef[] = [
 export const REMOTE_SNAPSHOT_TOOL: ToolDef = {
   name: "download_snapshot",
   description:
-    "Get the FULL live board — every market from every sportsbook (tens of MB gzip, 80k+ markets, refreshed ~every 30s). Too big for a context window, so this returns a direct CDN download_url, the current etag, and a ready-to-run save_command for the save_path you provide. RUN THE COMMAND IN YOUR OWN SHELL (on the machine you're working on) — the file downloads straight from the CDN, not through this server. Pass include_history=true for the variant with every selection's priceHistory populated (line movement; same schema, priceHistory is null without it). Re-check cheaply by passing the previous etag: if the board hasn't changed you get not_modified and skip the download (each variant has its own etag).",
+    "Get the full live odds board as a direct CDN download_url with the current etag and a ready-to-run save_command for the save_path you provide. Run the command in your own shell; the file downloads straight from the CDN, not through this server. Pass include_history=true for the variant with each selection's priceHistory populated (line movement; priceHistory is null without it). Re-check cheaply by passing the previous etag: if the board hasn't changed you get not_modified and skip the download (each variant has its own etag).",
   path: "/api/v1/snapshot",
   localParams: [
     { name: "save_path", type: "string", description: "Absolute file path ON YOUR MACHINE where you intend to save it; used to template save_command. `.gz` suffix keeps gzip; otherwise the command decompresses to JSON." },
