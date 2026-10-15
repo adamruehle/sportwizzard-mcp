@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 // SportWizzard MCP server — remote Streamable HTTP transport.
 //
-// Same tool set as the stdio server (index.ts), minus `download_snapshot`
-// (see tools.ts `remoteSafe` — writing to the *server's* filesystem doesn't
-// make sense for a hosted multi-tenant process). Auth: every request must
+// Same customer tool set as the stdio server (index.ts). `download_snapshot`
+// uses a hosted variant that returns a CDN URL and a safely quoted local
+// command instead of writing to the hosted server's filesystem. Auth: every request must
 // carry `Authorization: Bearer <sportwizzard-api-key>`; the key is validated
 // against SB (see auth.ts) and passed straight through as `X-Api-Key` on the
 // downstream REST calls the tools make, exactly like the stdio server passes

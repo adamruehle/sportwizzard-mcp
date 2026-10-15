@@ -71,6 +71,11 @@ function errorResult(message: string) {
   };
 }
 
+/** Quote one argument for a POSIX shell command returned to the remote caller. */
+function quotePosixShellArgument(value: string): string {
+  return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
 /**
  * Build a fully-wired MCP `Server` bound to a specific caller's config
  * (base URL / API key / mock flag) and tool set. Callers connect it to
@@ -124,9 +129,11 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
         // the client asks for gzip (verified live: plain GET streams ~600MB
         // JSON; Accept-Encoding: gzip delivers the ~70MB stored object).
         const gz = savePath.endsWith(".gz");
+        const quotedPath = quotePosixShellArgument(savePath);
+        const quotedUrl = quotePosixShellArgument(url);
         const saveCommand = gz
-          ? `curl -sS -H 'Accept-Encoding: gzip' -o '${savePath}' '${url}'`
-          : `curl -sS -o '${savePath}' '${url}'`;
+          ? `curl -sS -H 'Accept-Encoding: gzip' -o ${quotedPath} ${quotedUrl}`
+          : `curl -sS -o ${quotedPath} ${quotedUrl}`;
         return okResult({
           download_url: url,
           etag,

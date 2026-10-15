@@ -5,7 +5,7 @@
 export const MOCK: Record<string, any> = {
   status: {
     success: true,
-    data: [{ totalMarkets: 117774, sportsbooks: 29 }],
+    data: [{ available: true }],
     meta: { count: 1, updated: "2026-07-09T16:58:29Z" },
     _mock: true,
   },
@@ -18,11 +18,11 @@ export const MOCK: Record<string, any> = {
   sportsbooks: {
     success: true,
     data: [
-      { id: "draftkings", marketCount: 7074 },
-      { id: "fanduel", marketCount: 2335 },
-      { id: "betmgm", marketCount: 9243 },
-      { id: "prizepicks", marketCount: 1490 },
-      { id: "underdog", marketCount: 2886 },
+      { id: "draftkings" },
+      { id: "fanduel" },
+      { id: "betmgm" },
+      { id: "prizepicks" },
+      { id: "underdog" },
     ],
     meta: { count: 5, updated: "2026-07-09T16:58:29Z" },
     _mock: true,
@@ -30,9 +30,9 @@ export const MOCK: Record<string, any> = {
   markets: {
     success: true,
     data: [
-      { marketType: "MONEYLINE", marketSubtype: null, liveCount: 1085 },
-      { marketType: "SPREAD", marketSubtype: null, liveCount: 980 },
-      { marketType: "PLAYER_TOTAL", marketSubtype: null, liveCount: 20411 },
+      { marketType: "MONEYLINE", marketSubtype: null },
+      { marketType: "SPREAD", marketSubtype: null },
+      { marketType: "PLAYER_TOTAL", marketSubtype: null },
     ],
     meta: { count: 3, updated: "2026-07-09T16:58:29Z" },
     _mock: true,

@@ -68,7 +68,7 @@ Set `SPORTWIZZARD_MOCK=1` to get canned sample responses — useful for wiring u
 | `list_players` / `list_teams` / `get_player_stats` / `get_team_stats` | Reference data and season/historical stats. |
 | `get_player_game_logs` | Bulk per-game stat rows — the model-training feed. |
 | `download_snapshot` | Save the full live board to disk (tens of MB gzip). `include_history: true` also populates every selection's `priceHistory` (same schema; 5 credits flat vs 1). |
-| `list_sportsbooks` / `list_leagues` / `list_markets` / `status` | Coverage: books, leagues, market types, live counts. |
+| `list_sportsbooks` / `list_leagues` / `list_markets` / `status` | Discover source IDs, covered leagues and supported market types; check customer API availability. |
 | `get_account_usage` | Your plan tier, rate limit, and monthly usage. |
 
 Every response uses the envelope `{ success, data, nextCursor, meta }`; when `nextCursor` is present the tool appends a `_paging` hint so agents know to continue.
