@@ -21,13 +21,24 @@ const started = performance.now();
 const execFileAsync = promisify(execFile);
 const work = await mkdtemp(join(tmpdir(), 'sportwizzard-mcp-smoke-'));
 const requests = [];
+const measurements = [];
+let failMeasurement = false;
 const odds = [{ marketScope: 'SEASON', period: 'REG_SEASON', segment: 'AFC_EAST',
   marketSubtype: 'DIVISION_WINNER', selection: 'Buffalo Bills', priceAmerican: -180 }];
 const snapshot = { data: { eventMarkets: [{ id: 'smoke-market', selections: [
   { priceHistory: [{ fs: 1, ls: 2, pa: -110, pd: 1.909 }] },
 ] }] } };
 const api = createServer((req, res) => {
+  if (req.url === '/api/v1/account/measurement/mcp-tool-success') {
+    measurements.push({ method: req.method, key: req.headers['x-api-key'], body: '' });
+    res.writeHead(failMeasurement ? 503 : 204);
+    return res.end();
+  }
   requests.push(req.url);
+  if (req.url === '/api/v1/odds?scope=failed') {
+    res.end(JSON.stringify({ success: false, error: { message: 'fixture failure' } }));
+    return;
+  }
   res.setHeader('Content-Type', 'application/json');
   if (req.url === '/api/v1/odds?scope=season') {
     res.end(JSON.stringify({ success: true, data: odds, nextCursor: null, meta: { count: 1 } }));
@@ -52,7 +63,7 @@ const transport = new StdioClientTransport({
   command: process.execPath,
   args: [resolve(entryArgument)],
   cwd: work,
-  env: { SPORTWIZZARD_BASE_URL: baseUrl, SPORTWIZZARD_MOCK: '0', SPORTWIZZARD_API_KEY: '' },
+  env: { SPORTWIZZARD_BASE_URL: baseUrl, SPORTWIZZARD_MOCK: '0', SPORTWIZZARD_API_KEY: 'smoke-key' },
   stderr: 'pipe',
 });
 const timeout = setTimeout(() => {
@@ -90,6 +101,13 @@ try {
   assert.equal(result.success, true);
   assert.deepEqual(result.data, odds);
   assert.equal(result.meta.count, 1);
+  const failedEnvelope = await client.callTool({ name: 'get_odds', arguments: { scope: 'failed' } });
+  assert.equal(JSON.parse(failedEnvelope.content[0].text).success, false);
+  failMeasurement = true;
+  const measurementUnavailable = payload(await client.callTool({ name: 'get_odds', arguments: { scope: 'season' } }));
+  failMeasurement = false;
+  assert.equal(measurementUnavailable.success, true,
+    'measurement endpoint failures must not break successful tool output');
   const savedPath = join(work, 'snapshot.json.gz');
   const downloaded = payload(await client.callTool({ name: 'download_snapshot',
     arguments: { save_path: savedPath, include_history: true } }));
@@ -101,8 +119,12 @@ try {
   assert.deepEqual(JSON.parse(gunzipSync(saved)), snapshot);
   assert.deepEqual(requests, [
     '/api/v1/status', '/api/v1/sportsbooks', '/api/v1/markets',
-    '/api/v1/odds?scope=season', '/api/v1/snapshot?include_history=true',
+    '/api/v1/odds?scope=season', '/api/v1/odds?scope=failed', '/api/v1/odds?scope=season',
+    '/api/v1/snapshot?include_history=true',
   ]);
+  assert.equal(measurements.length, 6, 'only successful authenticated live tool calls are measured');
+  assert(measurements.every(item => item.method === 'POST' && item.key === 'smoke-key' && item.body === ''));
+  assert(!requests.includes('/api/v1/account/measurement/mcp-tool-success?'));
 
   const mockClient = new Client({ name: 'sportwizzard-package-mock-smoke', version: '1.0.0' });
   const mockTransport = new StdioClientTransport({
@@ -145,9 +167,24 @@ try {
   const installedDist = dirname(resolve(entryArgument));
   const { buildServer } = await import(pathToFileURL(resolve(installedDist, 'server.js')));
   const { REMOTE_TOOLS } = await import(pathToFileURL(resolve(installedDist, 'tools.js')));
+  const [keylessClientTransport, keylessServerTransport] = InMemoryTransport.createLinkedPair();
+  const keylessClient = new Client({ name: 'keyless-live-smoke', version: '1.0.0' });
+  const keylessServer = buildServer({ baseUrl, apiKey: '', mock: false }, REMOTE_TOOLS);
+  try {
+    await Promise.all([
+      keylessClient.connect(keylessClientTransport),
+      keylessServer.connect(keylessServerTransport),
+    ]);
+    const keylessResult = payload(await keylessClient.callTool({ name: 'get_odds', arguments: { scope: 'season' } }));
+    assert.equal(keylessResult.success, true);
+    assert.equal(measurements.length, 6, 'keyless live calls are never measured');
+  } finally {
+    await keylessClient.close();
+    await keylessServer.close();
+  }
   const [remoteClientTransport, remoteServerTransport] = InMemoryTransport.createLinkedPair();
   const remoteClient = new Client({ name: 'remote-snapshot-smoke', version: '1.0.0' });
-  const remoteServer = buildServer({ baseUrl, apiKey: '', mock: false }, REMOTE_TOOLS);
+  const remoteServer = buildServer({ baseUrl, apiKey: 'smoke-key', mock: false }, REMOTE_TOOLS);
   try {
     await Promise.all([
       remoteClient.connect(remoteClientTransport),
@@ -157,6 +194,8 @@ try {
     const hostilePath = join(work, "snapshot'; touch command-was-injected; #.json.gz");
     const remoteResult = payload(await remoteClient.callTool({ name: 'download_snapshot',
       arguments: { save_path: hostilePath } }));
+  assert.equal(measurements.length, 7,
+      'a reachable hosted snapshot URL counts as a successful authenticated tool result');
     await execFileAsync('sh', ['-c', remoteResult.save_command], { cwd: work });
     assert.equal(await readFile(hostilePath, 'utf8'), 'fixture-snapshot');
     await assert.rejects(readFile(marker));
@@ -171,7 +210,7 @@ try {
     await new Promise(resolveClose => snapshotServer.close(resolveClose));
   }
   const receipt = { result: 'passed', node: process.version,
-    environment: 'installed npm tarball; stdio MCP; loopback mock API; no production API or credentials',
+    environment: 'installed npm tarball; stdio MCP; loopback mock API and dummy fixture key; no production API or credentials',
     command: 'npm run smoke -- INSTALLED_ENTRY RECEIPT_PATH TARBALL_PATH',
     package_sha256: createHash('sha256').update(await readFile(resolve(tarballArgument))).digest('hex'),
     package_version: installedPackage.version,

@@ -9,7 +9,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { readFileSync } from "node:fs";
-import { apiGet, downloadSnapshot, ClientConfig, SportWizzardError } from "./client.js";
+import { apiGet, downloadSnapshot, ClientConfig, SportWizzardError, reportSuccessfulMcpToolUse } from "./client.js";
 import { mockFor } from "./mock.js";
 
 /** Package version, read from package.json so serverInfo never drifts from the release. */
@@ -120,10 +120,13 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
         : (process.env.SPORTWIZZARD_SNAPSHOT_URL ?? "https://data.sportwizzard.com/snapshot.json.gz");
       try {
         const head = await fetch(url, { method: "HEAD" });
+        if (!head.ok) return errorResult(`Snapshot CDN returned HTTP ${head.status}.`);
         const etag = head.headers.get("etag") ?? undefined;
         const size = head.headers.get("content-length") ?? undefined;
         if (args.etag && etag && String(args.etag) === etag) {
-          return okResult({ not_modified: true, etag, note: "Board unchanged since your last download — nothing to do." });
+          const result = { not_modified: true, etag, note: "Board unchanged since your last download — nothing to do." };
+          await reportSuccessfulMcpToolUse(cfg, result);
+          return okResult(result);
         }
         // The CDN stores gzip but transparently DECOMPRESSES in transit unless
         // the client asks for gzip (verified live: plain GET streams ~600MB
@@ -134,7 +137,7 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
         const saveCommand = gz
           ? `curl -sS -H 'Accept-Encoding: gzip' -o ${quotedPath} ${quotedUrl}`
           : `curl -sS -o ${quotedPath} ${quotedUrl}`;
-        return okResult({
+        const result = {
           download_url: url,
           etag,
           size_bytes_compressed: size ? Number(size) : undefined,
@@ -143,7 +146,9 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
             : "full live board (priceHistory null on every selection — pass include_history=true for line movement), refreshed ~every 30s; .gz save_path keeps the gzip, other paths save decompressed JSON (~10x larger)",
           save_command: saveCommand,
           instructions: "Run save_command in your own shell on the machine where you want the file. The download goes straight from the CDN to your disk — it does not pass through this MCP server and will not enter your context window. Keep the etag and pass it on the next call to skip unchanged downloads.",
-        });
+        };
+        await reportSuccessfulMcpToolUse(cfg, result);
+        return okResult(result);
       } catch (e) {
         return errorResult(`Could not reach the snapshot CDN: ${String(e)}`);
       }
@@ -158,6 +163,7 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
       try {
         const meta = await downloadSnapshot(cfg, savePath, args.etag ? String(args.etag) : undefined,
           args.include_history === true || args.include_history === "true");
+        await reportSuccessfulMcpToolUse(cfg, meta);
         return okResult(meta);
       } catch (e) {
         const msg = e instanceof SportWizzardError ? e.message : `Unexpected error: ${String(e)}`;
@@ -197,6 +203,7 @@ export function buildServer(cfg: ClientConfig, tools: ToolDef[] = TOOLS): Server
     // 401/403 and the client turns that into a clear "set your API key" message.
     try {
       const body = await apiGet(cfg, path, query);
+      await reportSuccessfulMcpToolUse(cfg, body);
       return okResult(body);
     } catch (e) {
       const msg =
