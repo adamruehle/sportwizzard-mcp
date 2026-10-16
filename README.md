@@ -18,11 +18,11 @@ codex mcp add sportwizzard --transport http --url https://mcp.sportwizzard.com/m
 
 The hosted server is a thin proxy: your key is forwarded to the SportWizzard API, which enforces auth and rate limits. All 20 tools work on both transports. (`download_snapshot` on the hosted server returns a CDN download URL + a ready-to-run command your agent executes locally; on stdio it writes the file directly.)
 
-Successful authenticated live tool calls are recorded for account usage. The
-measurement request contains no tool arguments or result data. For hosted
-`download_snapshot`, a successful CDN HEAD check counts because the tool has
-verified that the returned download URL is reachable; a failed HEAD check does
-not count.
+Successful authenticated live tool calls send a best-effort account-usage
+receipt. The measurement request contains no tool arguments or result data.
+For hosted `download_snapshot`, a successful CDN HEAD check counts because
+the tool has verified that the returned download URL is reachable; a failed
+HEAD check does not count.
 
 ## Stdio (local)
 

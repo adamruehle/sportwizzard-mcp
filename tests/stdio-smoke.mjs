@@ -196,7 +196,7 @@ try {
     const hostilePath = join(work, "snapshot'; touch command-was-injected; #.json.gz");
     const remoteResult = payload(await remoteClient.callTool({ name: 'download_snapshot',
       arguments: { save_path: hostilePath } }));
-  assert.equal(measurements.length, 7,
+    assert.equal(measurements.length, 7,
       'a reachable hosted snapshot URL counts as a successful authenticated tool result');
     await execFileAsync('sh', ['-c', remoteResult.save_command], { cwd: work });
     assert.equal(await readFile(hostilePath, 'utf8'), 'fixture-snapshot');
