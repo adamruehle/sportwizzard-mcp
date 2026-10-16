@@ -103,8 +103,17 @@ export async function apiGet(
 
   if (!text) return { success: true, data: [], meta: { count: 0 } };
   try {
-    return JSON.parse(text);
-  } catch {
+    const body = JSON.parse(text);
+    if (body && typeof body === "object" && body.success === false) {
+      const error = body.error;
+      const detail = error && typeof error === "object"
+        ? error.message || JSON.stringify(error)
+        : error || body.message || "The API returned success=false.";
+      throw new SportWizzardError(`SportWizzard API error on ${path}: ${detail}`);
+    }
+    return body;
+  } catch (e) {
+    if (e instanceof SportWizzardError) throw e;
     throw new SportWizzardError(`Invalid JSON from ${path}`);
   }
 }

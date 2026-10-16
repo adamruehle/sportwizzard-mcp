@@ -102,7 +102,9 @@ try {
   assert.deepEqual(result.data, odds);
   assert.equal(result.meta.count, 1);
   const failedEnvelope = await client.callTool({ name: 'get_odds', arguments: { scope: 'failed' } });
-  assert.equal(JSON.parse(failedEnvelope.content[0].text).success, false);
+  assert.equal(failedEnvelope.isError, true,
+    'an HTTP 200 success=false envelope must become an MCP tool error');
+  assert.match(failedEnvelope.content[0].text, /fixture failure/);
   failMeasurement = true;
   const measurementUnavailable = payload(await client.callTool({ name: 'get_odds', arguments: { scope: 'season' } }));
   failMeasurement = false;
