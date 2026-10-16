@@ -22,6 +22,22 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): ClientConfig {
   };
 }
 
+/** Record a successful live MCP tool call without affecting its result. */
+export async function reportSuccessfulMcpToolUse(cfg: ClientConfig, result: unknown): Promise<void> {
+  if (cfg.mock || !cfg.apiKey || (result && typeof result === "object" &&
+      (result as { success?: unknown }).success === false)) return;
+  try {
+    await fetch(cfg.baseUrl + "/api/v1/account/measurement/mcp-tool-success", {
+      method: "POST",
+      headers: { "X-Api-Key": cfg.apiKey },
+      body: "",
+      signal: AbortSignal.timeout(1000),
+    });
+  } catch {
+    // Usage measurement is best effort and must never change tool output.
+  }
+}
+
 export class SportWizzardError extends Error {
   constructor(message: string, readonly status?: number) {
     super(message);
@@ -87,8 +103,17 @@ export async function apiGet(
 
   if (!text) return { success: true, data: [], meta: { count: 0 } };
   try {
-    return JSON.parse(text);
-  } catch {
+    const body = JSON.parse(text);
+    if (body && typeof body === "object" && body.success === false) {
+      const error = body.error;
+      const detail = error && typeof error === "object"
+        ? error.message || JSON.stringify(error)
+        : error || body.message || "The API returned success=false.";
+      throw new SportWizzardError(`SportWizzard API error on ${path}: ${detail}`);
+    }
+    return body;
+  } catch (e) {
+    if (e instanceof SportWizzardError) throw e;
     throw new SportWizzardError(`Invalid JSON from ${path}`);
   }
 }
